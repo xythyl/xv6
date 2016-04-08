@@ -1616,7 +1616,9 @@ main(int argc, char *argv[])
   }
   close(open("usertests.ran", O_CREATE));
 
-  bigargtest();
+  int cnt = count();
+
+  printf(1, "Syscall count: %d\n", cnt);
   bigwrite();
   bigargtest();
   bsstest();

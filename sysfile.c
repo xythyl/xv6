@@ -423,3 +423,9 @@ sys_pipe(void)
   fd[1] = fd1;
   return 0;
 }
+
+int
+sys_count(void) //returns count of syscalls run
+{
+  return proc->count; 
+}
