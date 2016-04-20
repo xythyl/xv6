@@ -1619,6 +1619,8 @@ main(int argc, char *argv[])
   int cnt = count();
 
   printf(1, "Syscall count: %d\n", cnt);
+  
+  bigargtest();
   bigwrite();
   bigargtest();
   bsstest();
