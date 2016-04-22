@@ -461,8 +461,54 @@ procdump(void)
     cprintf("\n");
   }
 }
-/*
+
 int waitpid(int pid, int *status, int options)
 {
-  return 0;
-}*/
+  struct proc *p;
+  int havekids;
+
+  acquire(&ptable.lock);
+  for(;;){
+    // Scan through table looking for zombie children.
+    havekids = 0;
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->pid != pid)
+        continue;
+      havekids = 1;
+      if(p->state == ZOMBIE){
+        // Found one.
+        //ppid = p->pid;
+        kfree(p->kstack);
+        p->kstack = 0;
+        freevm(p->pgdir);
+        p->state = UNUSED;
+        p->pid = 0;
+        p->parent = 0;
+        p->name[0] = 0;
+        p->killed = 0;
+        if(status) {
+          status = &p->status;
+        }
+        release(&ptable.lock);
+        return pid;
+      }
+      break;
+    }
+
+    // No point waiting if we don't have any children.
+    if(!havekids || proc->killed){
+      release(&ptable.lock);
+      return -1;
+    }
+
+    if (p->parent->pid == proc->pid) {
+      // Wait for children to exit.  (See wakeup1 call in proc_exit.)
+      sleep(proc, &ptable.lock);  //DOC: wait-sleep
+    }
+    else {
+      release(&ptable.lock);
+      yield();
+      acquire(&ptable.lock);
+    }
+  }
+}

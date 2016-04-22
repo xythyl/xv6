@@ -429,9 +429,3 @@ sys_count(void) //returns count of syscalls run
 {
   return proc->count; 
 }
-/*
-int
-sys_waitpid(int pid, int *status, int options)
-{
-  return 0;
-}*/
