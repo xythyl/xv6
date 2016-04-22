@@ -472,12 +472,12 @@ int waitpid(int pid, int *status, int options)
     // Scan through table looking for zombie children.
     havekids = 0;
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->pid != pid)
+      if(p->parent != proc)
         continue;
       havekids = 1;
-      if(p->state == ZOMBIE){
+      if(p->state == ZOMBIE && p->pid == pid){
         // Found one.
-        //ppid = p->pid;
+        pid = p->pid;
         kfree(p->kstack);
         p->kstack = 0;
         freevm(p->pgdir);
@@ -492,7 +492,6 @@ int waitpid(int pid, int *status, int options)
         release(&ptable.lock);
         return pid;
       }
-      break;
     }
 
     // No point waiting if we don't have any children.
@@ -501,14 +500,17 @@ int waitpid(int pid, int *status, int options)
       return -1;
     }
 
-    if (p->parent->pid == proc->pid) {
+    if (options) {
       // Wait for children to exit.  (See wakeup1 call in proc_exit.)
       sleep(proc, &ptable.lock);  //DOC: wait-sleep
     }
     else {
+      return -1;
+      /*
       release(&ptable.lock);
       yield();
       acquire(&ptable.lock);
+      */
     }
   }
 }
