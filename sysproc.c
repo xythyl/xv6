@@ -93,3 +93,7 @@ sys_uptime(void)
   return xticks;
 }
 
+int
+sys_waitpid(int pid, int *status, int options) {
+  return 0;
+}

@@ -4,7 +4,7 @@ struct stat;
 int fork(void);
 //int exit(void) __attribute__((noreturn));
 int exit(int status) __attribute__((noreturn));
-int wait(void);
+int wait(int *status);
 int pipe(int*);
 int write(int, void*, int);
 int read(int, void*, int);
@@ -24,6 +24,7 @@ char* sbrk(int);
 int sleep(int);
 int uptime(void);
 int count(void);
+int waitpid(int pid, int *status, int options);
 
 // ulib.c
 int stat(char*, struct stat*);
