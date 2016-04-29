@@ -37,6 +37,7 @@ allocproc(void)
   struct proc *p;
   char *sp;
 
+
   acquire(&ptable.lock);
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == UNUSED)
@@ -47,7 +48,9 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+  p->priority = 0; // set initial priority to 0
   release(&ptable.lock);
+
 
   // Allocate kernel stack.
   if((p->kstack = kalloc()) == 0){
@@ -234,7 +237,7 @@ wait(int *status)
         p->name[0] = 0;
         p->killed = 0;
         if(status) {
-          status = &p->status;
+          *status = p->status;
         }
         release(&ptable.lock);
         return pid;
@@ -263,7 +266,7 @@ wait(int *status)
 void
 scheduler(void)
 {
-  struct proc *p;
+  struct proc *p, *s, *prio;
 
   for(;;){
     // Enable interrupts on this processor.
@@ -274,13 +277,20 @@ scheduler(void)
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
-
+      prio = p;
+      for(s = p++; s < &ptable.proc[NPROC]; s++) {
+        if(s->state != RUNNABLE)
+          continue;
+        else if(s->priority > prio->priority) {
+          prio = s;
+        }
+      }
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
-      proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
+      proc = prio;
+      switchuvm(prio);
+      prio->state = RUNNING;
       swtch(&cpu->scheduler, proc->context);
       switchkvm();
 
@@ -462,4 +472,65 @@ procdump(void)
   }
 }
 
+int waitpid(int pid, int *status, int options)
+{
+  struct proc *p;
+  int havekids;
 
+  acquire(&ptable.lock);
+  for(;;){
+    // Scan through table looking for zombie children.
+    havekids = 0;
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      //if(p->parent != proc)
+      if(p->pid != pid)
+        continue;
+      havekids = 1;
+      if(p->state == ZOMBIE){//&& p->pid == pid
+        // Found one.
+        pid = p->pid;
+        kfree(p->kstack);
+        p->kstack = 0;
+        freevm(p->pgdir);
+        p->state = UNUSED;
+        p->pid = 0;
+        p->parent = 0;
+        p->name[0] = 0;
+        p->killed = 0;
+        
+        if(status) {
+          *status = p->status;
+        }
+        release(&ptable.lock);
+        return pid;
+      }
+    }
+
+    // No point waiting if we don't have any children.
+    if(!havekids || proc->killed){
+      release(&ptable.lock);
+      return -1;
+    }
+
+    /*
+    sleep(proc, &ptable.lock);
+    */
+    if (p->parent->pid == proc->pid) { //(options)
+      // Wait for children to exit.  (See wakeup1 call in proc_exit.)
+      sleep(proc, &ptable.lock);  //DOC: wait-sleep
+    }
+    else {
+      //return -1;
+      release(&ptable.lock);
+      yield();
+      acquire(&ptable.lock);
+      
+    }
+  }
+}
+
+int
+change_priority(int priority) {
+  proc->priority = priority;   
+  return 0;
+}

@@ -25,7 +25,8 @@ int
 sys_wait(void)
 {
   int *status;
-  argptr(0, (char**) &status, sizeof(int*));
+  if(argptr(0, (char**) &status, sizeof(int*)) < 0)
+    return -1;
   return wait(status);
 }
 
@@ -93,3 +94,23 @@ sys_uptime(void)
   return xticks;
 }
 
+int
+sys_waitpid(void) {
+  int pid, options;
+  int *status;
+  if(argint(0, &pid) < 0) //possible error
+    return -1;
+  if(argptr(1, (char**) &status, sizeof(int*)) < 0)
+    return -1;
+  if(argint(2, &options) < 0) //possible error
+    return -1;
+  return waitpid(pid, status, options);
+}
+
+int
+sys_change_priority(void) {
+  int priority;
+  if(argint(0, &priority) < 0)
+     return -1;
+  return change_priority(priority);
+}
