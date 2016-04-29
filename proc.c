@@ -237,7 +237,7 @@ wait(int *status)
         p->name[0] = 0;
         p->killed = 0;
         if(status) {
-          status = &p->status;
+          *status = p->status;
         }
         release(&ptable.lock);
         return pid;
@@ -497,14 +497,14 @@ int waitpid(int pid, int *status, int options)
         p->parent = 0;
         p->name[0] = 0;
         p->killed = 0;
+        
         if(status) {
-          status = &p->status;
+          *status = p->status;
         }
         release(&ptable.lock);
         return pid;
       }
     }
-
 
     // No point waiting if we don't have any children.
     if(!havekids || proc->killed){
@@ -512,8 +512,9 @@ int waitpid(int pid, int *status, int options)
       return -1;
     }
 
-    sleep(proc, &ptable.lock);
     /*
+    sleep(proc, &ptable.lock);
+    */
     if (p->parent->pid == proc->pid) { //(options)
       // Wait for children to exit.  (See wakeup1 call in proc_exit.)
       sleep(proc, &ptable.lock);  //DOC: wait-sleep
@@ -525,7 +526,6 @@ int waitpid(int pid, int *status, int options)
       acquire(&ptable.lock);
       
     }
-    */
   }
 }
 
